@@ -3,10 +3,7 @@ from flask_cors import CORS
 
 UPLOAD_FOLDER = 'data'
 
-app = Flask(__name__,
-			static_url_path='', 
-            static_folder='static',
-            template_folder='templates')
+app = Flask(__name__)
 
 CORS(app)
 

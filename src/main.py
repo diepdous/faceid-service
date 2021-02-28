@@ -21,21 +21,22 @@ from flask import Flask, request, redirect, jsonify, Blueprint, render_template,
 minsize = 20  # minimum size of face
 threshold = [0.6, 0.7, 0.7]  # three steps's threshold
 factor = 0.709  # scale factor
+
 def load_embs(csv_file_name):
     csv_file=open(csv_file_name, mode='r')
     csv_reader = csv.reader(csv_file, delimiter=',')
-    
+
     nrows = 0
     for row in csv_reader:
         nrows += 1
     vEmb = np.zeros((nrows - 1, 128), dtype='float32')
     vID = np.zeros(nrows - 1, dtype='int')
-    
+
     csv_file.close()
-    
+
     csv_file=open(csv_file_name, mode='r')
     csv_reader = csv.reader(csv_file, delimiter=',')
-    
+
     line_count = 0
     for row in csv_reader:
         if line_count == 0:
@@ -48,9 +49,6 @@ def load_embs(csv_file_name):
             line_count += 1
     csv_file.close()
     return vEmb, vID
-#vEmb,vID=load_embs('C001#G002#FaceEmbs.csv')
-#print(vID)
-#exit()
 
 def load_mtcnn():
     with tf.Graph().as_default():
@@ -92,7 +90,6 @@ def align_one_face(image_file_name,pnet, rnet,onet,image_size=160, margin=11):
         img_list.append(prewhitened)
     images = np.stack(img_list)
     return img,images,bounding_boxes
-
 
 def embedding(images):
     # check is model exists
@@ -187,19 +184,17 @@ def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,
             continue
         cv2.putText(I_org,str(aFaceID[i]),(int(box[0])+40, int(box[1])+40),cv2.FONT_HERSHEY_SIMPLEX,1,(0, 0,255),2,cv2.LINE_AA) 
     return I_org,aFaceCrop,bounding_boxes,aFaceID
-    
+
 # Xác định nhóm
 vEmb_group,vID_group=load_embs('C001#G009#FaceEmbs.csv')
 # Load model cho face crop
 pnet, rnet, onet=load_mtcnn()
 
-main = Blueprint('main', __name__)
-
-@main.route('/')
+@app.route('/')
 def index():
-    return render_template('index.html')
+    return "Face365 - Sign in"
 
-@app.route('/api/file-upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 def upload_file():
     # check if the post request has the file part
     if 'file' not in request.files:
@@ -235,8 +230,6 @@ def upload_file():
         resp = jsonify({'message' : 'Allowed file types are txt, pdf, png, jpg, jpeg, gif'})
         resp.status_code = 400
         return resp
-
-app.register_blueprint(main)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
