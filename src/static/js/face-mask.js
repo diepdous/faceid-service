@@ -44,7 +44,7 @@ $("#webcam-switch").change(function () {
 $("#mask-btn").click(function () {
     let picture = webcam.snap();
 
-    var url = "http://localhost:5000/api/file-upload";
+    var url = "http://face-login.hddtai.com:5000/api/file-upload";
     var image = picture;
     var base64ImageContent = image.replace(/^data:image\/(png|jpg);base64,/, "");
     var blob = base64ToBlob(base64ImageContent, 'image/png');
@@ -57,12 +57,12 @@ $("#mask-btn").click(function () {
         cache: false,
         contentType: false,
         processData: false,
-        data: formData}
-    ).done(function(e){
-        alert('done!');
+        data: formData,
+        success: function(data){
+            $("#errorMsg").html(data);
+            displayError();
+        }
     });
-
-    displayError();
 });
 
 $('#closeError').click(function() {

@@ -213,24 +213,24 @@ def upload_file():
         return resp
     if file:
         img = Image.open(file.stream)
-        # img.show()
+        img.show()
         filename = str(uuid.uuid4()) + ".png";
         saved_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         img.save(saved_file)
-        return saved_file
+        # return saved_file
 
         # filename = secure_filename(file.filename)
         # saved_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         # file.save(saved_file)
 
-        # I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
-        # sFaceID = []
-        # for i in range(len(aFaceID)):
-        #     sFaceID.append(str(aFaceID[i][0]));
+        I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
+        sFaceID = []
+        for i in range(len(aFaceID)):
+            sFaceID.append(str(aFaceID[i][0]));
 
-        # resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID)})
-        # resp.status_code = 200
-        # return resp
+        resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID)})
+        resp.status_code = 200
+        return resp
     else:
         resp = jsonify({'message' : 'Allowed file types are txt, pdf, png, jpg, jpeg, gif'})
         resp.status_code = 400
