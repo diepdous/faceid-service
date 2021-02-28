@@ -11,9 +11,12 @@ import numpy as np
 from scipy import spatial
 
 import urllib.request
+import uuid
 from app import app
-from flask import Flask, request, redirect, jsonify
-from werkzeug.utils import secure_filename
+
+from PIL import Image
+
+from flask import Flask, request, redirect, jsonify, Blueprint, render_template, Response
 
 minsize = 20  # minimum size of face
 threshold = [0.6, 0.7, 0.7]  # three steps's threshold
@@ -189,26 +192,14 @@ def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,
 vEmb_group,vID_group=load_embs('C001#G009#FaceEmbs.csv')
 # Load model cho face crop
 pnet, rnet, onet=load_mtcnn()
-                   
-#Thử với từng ảnh
 
+main = Blueprint('main', __name__)
 
-#I_org,images,bounding_boxes=align_one_face('D4.jpg',pnet, rnet,onet,image_size=160, margin=11)
-#embs=embedding(images)
-#for emb in embs:
-#    faceID = get_ID_by_KNN(emb,vEmb_group,vID_group,nbest=5,thresh=0.7)
-#    print(faceID)
+@main.route('/')
+def index():
+    return render_template('index.html')
 
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
-
-@app.route("/")
-def hello():
-    return "Face365-ID!!"
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@app.route('/file-upload', methods=['POST'])
+@app.route('/api/file-upload', methods=['POST'])
 def upload_file():
     # check if the post request has the file part
     if 'file' not in request.files:
@@ -220,24 +211,32 @@ def upload_file():
         resp = jsonify({'message' : 'No file selected for uploading'})
         resp.status_code = 400
         return resp
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
+    if file:
+        img = Image.open(file.stream)
+        # img.show()
+        filename = str(uuid.uuid4()) + ".png";
         saved_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(saved_file)
+        img.save(saved_file)
+        return saved_file
 
-        I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
-        sFaceID = []
-        for i in range(len(aFaceID)):
-            sFaceID.append(str(aFaceID[i][0]));
+        # filename = secure_filename(file.filename)
+        # saved_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # file.save(saved_file)
 
-        resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID)})
-        resp.status_code = 201
-        return resp
+        # I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
+        # sFaceID = []
+        # for i in range(len(aFaceID)):
+        #     sFaceID.append(str(aFaceID[i][0]));
+
+        # resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID)})
+        # resp.status_code = 200
+        # return resp
     else:
         resp = jsonify({'message' : 'Allowed file types are txt, pdf, png, jpg, jpeg, gif'})
         resp.status_code = 400
         return resp
 
+app.register_blueprint(main)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

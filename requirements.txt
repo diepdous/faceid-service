@@ -9,3 +9,4 @@ Pillow
 requests
 psutil
 flask
+flask_cors
