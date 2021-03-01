@@ -50,6 +50,23 @@ def load_embs(csv_file_name):
     csv_file.close()
     return vEmb, vID
 
+def load_user(file_name):
+    file = open(file_name, 'r')
+    Lines = file.readlines()
+
+    count = 0
+    aTmp = {}
+    # Strips the newline character
+    for line in Lines:
+        count += 1
+        # print("Line{}: {}".format(count, line.strip()))
+        txt=line.strip()
+        x = txt.split("#")
+        # print(x[0])
+        # print(x[1])
+        aTmp[x[0]]=str(x[1])
+    return aTmp
+
 def load_mtcnn():
     with tf.Graph().as_default():
         sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
@@ -66,7 +83,7 @@ def align_one_face(image_file_name,pnet, rnet,onet,image_size=160, margin=11):
     #cv2.imshow("def align_face",img)
     #cv2.waitKey()
     ########################################
-        
+
     img_size = np.asarray(img.shape)[0:2]
     bounding_boxes, _ = detect_face.detect_face(img, minsize, pnet, rnet, onet, threshold, factor)
     if len(bounding_boxes) < 1:
@@ -176,7 +193,7 @@ def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,
     ###############################################
     if drawing==False:
         return I_org,aFaceCrop,bounding_boxes,aFaceID
-    
+
     for i in range(count_face):
         box=bounding_boxes[i]
         cv2.rectangle(I_org, (int(box[0]), int(box[1]) ), (int(box[2]), int(box[3])), (255,0,0), 2)
@@ -186,7 +203,9 @@ def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,
     return I_org,aFaceCrop,bounding_boxes,aFaceID
 
 # Xác định nhóm
-vEmb_group,vID_group=load_embs('C001#G009#FaceEmbs.csv')
+vEmb_group,vID_group=load_embs('face.csv')
+# Lấy danh sách Users
+aFaceName=load_user('FaceNames.txt')
 # Load model cho face crop
 pnet, rnet, onet=load_mtcnn()
 
@@ -208,7 +227,7 @@ def upload_file():
         return resp
     if file:
         img = Image.open(file.stream)
-        img.show()
+        # img.show()
         filename = str(uuid.uuid4()) + ".png";
         saved_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         img.save(saved_file)
@@ -220,10 +239,13 @@ def upload_file():
 
         I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
         sFaceID = []
+        sFaceName = []
         for i in range(len(aFaceID)):
-            sFaceID.append(str(aFaceID[i][0]));
+            if(aFaceID[i][0] > 0):
+                sFaceID.append(str(aFaceID[i][0]));
+                sFaceName.append(aFaceName[str(aFaceID[i][0])]);
 
-        resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID)})
+        resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
         resp.status_code = 200
         return resp
     else:
