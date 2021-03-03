@@ -144,20 +144,20 @@ def UpdateNbest(d,id,vDist_best,vID_best):
 def get_ID_by_KNN(one_emb,vEmb,vID,nbest,thresh):
     countItem=vEmb.shape[0]
     aDist=np.zeros((countItem,1),dtype='float32')
-    
+
     vID_nbest=np.zeros((nbest,1),dtype='int32')
     vDist_nbest=np.zeros((nbest,1),dtype='float32')
-    
+
     for k in range(nbest):
         vDist_nbest[k] = float("inf")
         vID_nbest[k] = -1
-        
+
     for i in range(countItem):
         #d_cos=1 - spatial.distance.cosine(one_emb, vEmb[i])
         d_cos=spatial.distance.cosine(one_emb, vEmb[i])
         aDist[i]=1.0-d_cos
         vDist_nbest, vID_nbest=UpdateNbest(d_cos, vID[i], vDist_nbest, vID_nbest)
-         
+
     vID_nbest_unique,counts = np.unique(vID_nbest,return_counts=True)
     a=np.where(counts==max(counts))
     faceID=vID_nbest_unique[a[0][0]]
@@ -172,35 +172,22 @@ def get_ID_by_KNN(one_emb,vEmb,vID,nbest,thresh):
         return -1
 
 def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=False):
-    
+
     I_org,images,bounding_boxes=align_one_face(image_file_name,pnet, rnet,onet,image_size,margin)
+
+    if bounding_boxes is None:
+        return None,None,None,None
+
     count_face=len(bounding_boxes)
     if count_face < 1:
         return None,None,None,None
-        
+
     embs=embedding(images)
     aFaceID=np.zeros((count_face,1),dtype='int32')
     for i in range(count_face):
         aFaceID[i] = get_ID_by_KNN(embs[i],vEmb_group,vID_group,nbest=5,thresh=0.7)
-    
-    #crop và chuẩn hóa vùng ảnh để sau có thể train
-    face_crop_list = []
-    for box in bounding_boxes:
-        cropped = I_org[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :]
-        aligned = cv2.resize(cropped[:, :, ::-1],(image_size, image_size))[:, :, ::-1]
-        face_crop_list.append(aligned)
-    aFaceCrop=np.stack(face_crop_list)
-    ###############################################
-    if drawing==False:
-        return I_org,aFaceCrop,bounding_boxes,aFaceID
 
-    for i in range(count_face):
-        box=bounding_boxes[i]
-        cv2.rectangle(I_org, (int(box[0]), int(box[1]) ), (int(box[2]), int(box[3])), (255,0,0), 2)
-        if aFaceID[i]==-1:
-            continue
-        cv2.putText(I_org,str(aFaceID[i]),(int(box[0])+40, int(box[1])+40),cv2.FONT_HERSHEY_SIMPLEX,1,(0, 0,255),2,cv2.LINE_AA) 
-    return I_org,aFaceCrop,bounding_boxes,aFaceID
+    return I_org,None,bounding_boxes,aFaceID
 
 # Xác định nhóm
 vEmb_group,vID_group=load_embs('face.csv')
@@ -215,14 +202,19 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    fid = int(request.form.get('fid'))
+    if fid <= 0:
+        resp = jsonify({'status': 'false', 'message' : 'fid is required', 'fid' : fid})
+        resp.status_code = 400
+        return resp
     # check if the post request has the file part
     if 'file' not in request.files:
-        resp = jsonify({'message' : 'No file part in the request'})
+        resp = jsonify({'status': 'false', 'message' : 'No file part in the request'})
         resp.status_code = 400
         return resp
     file = request.files['file']
     if file.filename == '':
-        resp = jsonify({'message' : 'No file selected for uploading'})
+        resp = jsonify({'status': 'false', 'message' : 'No file selected for uploading'})
         resp.status_code = 400
         return resp
     if file:
@@ -238,16 +230,27 @@ def upload_file():
         # file.save(saved_file)
 
         I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
+        if aFaceID is None:
+            resp = jsonify({'status': 'false', 'message' : 'Can not detect face'})
+            resp.status_code = 400
+            return resp
+
         sFaceID = []
         sFaceName = []
+        iFaceID = 0
         for i in range(len(aFaceID)):
             if(aFaceID[i][0] > 0):
-                sFaceID.append(str(aFaceID[i][0]));
-                sFaceName.append(aFaceName[str(aFaceID[i][0])]);
-
-        resp = jsonify({'message' : 'success', 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
-        resp.status_code = 200
-        return resp
+                sFaceID.append(str(aFaceID[i][0]))
+                sFaceName.append(aFaceName[str(aFaceID[i][0])])
+                iFaceID = int(aFaceID[i][0])
+        if(iFaceID == fid):
+            resp = jsonify({'status': 'true', 'message' : 'success', 'iFaceID' : iFaceID, 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
+            resp.status_code = 200
+            return resp
+        else:
+            resp = jsonify({'status': 'false', 'message' : 'false', 'iFaceID' : iFaceID, 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
+            resp.status_code = 200
+            return resp
     else:
         resp = jsonify({'message' : 'Allowed file types are txt, pdf, png, jpg, jpeg, gif'})
         resp.status_code = 400
