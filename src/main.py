@@ -205,16 +205,19 @@ def upload_file():
     fid = int(request.form.get('fid'))
     if fid <= 0:
         resp = jsonify({'status': 'false', 'message' : 'fid is required', 'fid' : fid})
+        resp.headers.add('Access-Control-Allow-Origin', '*')
         resp.status_code = 400
         return resp
     # check if the post request has the file part
     if 'file' not in request.files:
         resp = jsonify({'status': 'false', 'message' : 'No file part in the request'})
+        resp.headers.add('Access-Control-Allow-Origin', '*')
         resp.status_code = 400
         return resp
     file = request.files['file']
     if file.filename == '':
         resp = jsonify({'status': 'false', 'message' : 'No file selected for uploading'})
+        resp.headers.add('Access-Control-Allow-Origin', '*')
         resp.status_code = 400
         return resp
     if file:
@@ -232,6 +235,7 @@ def upload_file():
         I_org,aFaceCrop,bounding_boxes,aFaceID = tag_one_face_image_knn(saved_file,pnet, rnet,onet,vEmb_group,vID_group,image_size=160, margin=11,nbest=5,thresh=0.7,drawing=True)
         if aFaceID is None:
             resp = jsonify({'status': 'false', 'message' : 'Can not detect face'})
+            resp.headers.add('Access-Control-Allow-Origin', '*')
             resp.status_code = 400
             return resp
 
@@ -245,10 +249,12 @@ def upload_file():
                 iFaceID = int(aFaceID[i][0])
         if(iFaceID == fid):
             resp = jsonify({'status': 'true', 'message' : 'success', 'iFaceID' : iFaceID, 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
+            resp.headers.add('Access-Control-Allow-Origin', '*')
             resp.status_code = 200
             return resp
         else:
             resp = jsonify({'status': 'false', 'message' : 'false', 'iFaceID' : iFaceID, 'lstFaceId' : ','.join(sFaceID), 'lstFaceName' : ','.join(sFaceName)})
+            resp.headers.add('Access-Control-Allow-Origin', '*')
             resp.status_code = 200
             return resp
     else:
