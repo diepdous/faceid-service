@@ -189,9 +189,9 @@ def tag_one_face_image_knn(image_file_name,pnet, rnet,onet,vEmb_group,vID_group,
 
     return I_org,None,bounding_boxes,aFaceID
 
-# Xác định nhóm
+# Xac dinh nhom
 vEmb_group,vID_group=load_embs('face.csv')
-# Lấy danh sách Users
+# Lay danh sach Users
 aFaceName=load_user('FaceNames.txt')
 # Load model cho face crop
 pnet, rnet, onet=load_mtcnn()
