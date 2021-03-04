@@ -1,0 +1,1 @@
+nohup python3 src/main.py > /var/log/face365-service.log 2>&1 &
